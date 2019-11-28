@@ -16,7 +16,7 @@
 import copy
 import json
 import os
-import urllib
+from urllib.parse import unquote_plus
 from distutils.util import strtobool
 
 import boto3
@@ -66,11 +66,13 @@ def event_object(event, event_source="s3"):
     key_name = s3_obj["object"].get("key", None)
 
     if key_name:
-        key_name = urllib.unquote_plus(key_name.encode("utf8"))
+        key_name = unquote_plus(key_name)
 
     # Ensure both bucket and key exist
     if (not bucket_name) or (not key_name):
         raise Exception("Unable to retrieve object from event.\n{}".format(event))
+
+    print("Event object: s3://%s/%s\n" % (bucket_name, key_name))
 
     # Create and return the object
     s3 = boto3.resource("s3")
@@ -238,12 +240,7 @@ def lambda_handler(event, context):
         "Scan of s3://%s resulted in %s\n"
         % (os.path.join(s3_object.bucket_name, s3_object.key), scan_result)
     )
-
     result_time = get_timestamp()
-    # Set the properties on the object with the scan results
-    if "AV_UPDATE_METADATA" in os.environ:
-        set_av_metadata(s3_object, scan_result, scan_signature, result_time)
-    set_av_tags(s3_client, s3_object, scan_result, scan_signature, result_time)
 
     # Publish the scan results
     if AV_STATUS_SNS_ARN not in [None, ""]:
@@ -255,6 +252,11 @@ def lambda_handler(event, context):
             scan_signature,
             result_time,
         )
+
+    # Set the properties on the object with the scan results
+    if "AV_UPDATE_METADATA" in os.environ:
+        set_av_metadata(s3_object, scan_result, scan_signature, result_time)
+    set_av_tags(s3_client, s3_object, scan_result, scan_signature, result_time)
 
     metrics.send(
         env=ENV, bucket=s3_object.bucket_name, key=s3_object.key, status=scan_result
