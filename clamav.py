@@ -127,7 +127,7 @@ def update_defs_from_freshclam(path, library_path=""):
         stdout=subprocess.PIPE,
         env=fc_env,
     )
-    output = fc_proc.communicate()[0]
+    output = fc_proc.communicate()[0].decode("utf-8")
     print("freshclam output:\n%s" % output)
     if fc_proc.returncode != 0:
         print("Unexpected exit code from freshclam: %s." % fc_proc.returncode)
@@ -194,7 +194,7 @@ def scan_file(path):
         stdout=subprocess.PIPE,
         env=av_env,
     )
-    output = av_proc.communicate()[0]
+    output = av_proc.communicate()[0].decode("utf-8")
     print("clamscan output:\n%s" % output)
 
     # Turn the output into a data source we can read
